@@ -8,9 +8,11 @@ import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import org.lwjgl.BufferUtils;
 import static org.lwjgl.glfw.GLFW.*;
+import org.lwjgl.glfw.GLFWCursorPosCallback;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWFramebufferSizeCallback;
 import org.lwjgl.glfw.GLFWKeyCallback;
+import org.lwjgl.glfw.GLFWMouseButtonCallback;
 import org.lwjgl.opengl.GL;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
@@ -91,9 +93,21 @@ public class Pong {
      */
     private GLFWKeyCallback keyCallback;
     /**
+     * A reference to the cursor pos callback.
+     */
+    private GLFWCursorPosCallback cursorPosCallback;
+    /**
+     * A reference to the mouse buttom callback.
+     */
+    private GLFWMouseButtonCallback mouseButtonCallback;
+    /**
      * The handle of the window.
      */
     private long window;
+    /**
+     * The current window position of the cursor.
+     */
+    private final CursorPos cursorPos = new CursorPos();
     /**
      * Has there been a close request not coming from the window itself.
      */
@@ -218,6 +232,35 @@ public class Pong {
                 } else if(key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
                     //Request close.
                     remainOpen = false;
+                }
+            }
+
+        }));
+        
+        //Setup the cursor pos callback.
+        glfwSetCursorPosCallback(window, (cursorPosCallback = new GLFWCursorPosCallback() {
+
+            @Override
+            public void invoke(long window, double xpos, double ypos) {
+                cursorPos.x = xpos;
+                cursorPos.y = framebuffer.height - ypos;
+            }
+
+        }));
+        
+        //Setup the cursor pos callback.
+        glfwSetMouseButtonCallback(window, (mouseButtonCallback = new GLFWMouseButtonCallback() {
+
+            @Override
+            public void invoke(long window, int button, int action, int mods) {
+                if(button == 0) {
+                    //If this event is down event and no current to-add-ball.
+                    //Else If this event is up event and there is a current to-add-ball.
+                    if(action == GLFW_PRESS && addBall == null) {
+                        onNewBall(cursorPos.x, cursorPos.y);
+                    } else if(action == GLFW_RELEASE && addBall != null) {
+                        onNewBallRelease(cursorPos.x, cursorPos.y);
+                    }
                 }
             }
 
@@ -356,24 +399,10 @@ public class Pong {
      * @param delta The Time difference in milliseconds since the last frame.
      */
     public void update(double delta) {
-        /*//Iterate through mouse input events.
-        while(Mouse.next()) {
-            //If this event is primary mouse button.
-            if(Mouse.getEventButton() == 0) {
-                //If this event is down event and no current to-add-ball.
-                //Else If this event is up event and there is a current to-add-ball.
-                if(Mouse.getEventButtonState() && addBall == null) {
-                    onNewBall(Mouse.getEventX(), Mouse.getEventY());
-                } else if(!Mouse.getEventButtonState() && addBall != null) {
-                    onNewBallRelease(Mouse.getEventX(), Mouse.getEventY());
-                }
-            }
-        }
         //If there is a current to-add-ball. (Mouse movement not event driven in LWJGL2)
         if(addBall != null) {
-            updateNewBall(Mouse.getX(), Mouse.getY());
+            updateNewBall(cursorPos.x, cursorPos.y);
         }
-        */
         
         //If not paused then update paddles.
         if(currentState == State.PLAYING || currentState == State.LOST) {
@@ -536,9 +565,9 @@ public class Pong {
      * @param windowX The window x coordinate of the mouse.
      * @param windowY The window y coordinate of the mouse.
      */
-    public void onNewBall(int windowX, int windowY) {
-        centreX = windowToWorldCoordsX(framebuffer, projection, windowX);
-        centreY = windowToWorldCoordsY(framebuffer, projection, windowY);
+    public void onNewBall(double windowX, double windowY) {
+        centreX = (float) windowToWorldCoordsX(framebuffer, projection, windowX);
+        centreY = (float) windowToWorldCoordsY(framebuffer, projection, windowY);
         addBall = new Ball(centreX, centreY, 0, 0);
     }
     
@@ -548,9 +577,9 @@ public class Pong {
      * @param windowX The window x coordinate of the mouse.
      * @param windowY The window y coordinate of the mouse.
      */
-    public void updateNewBall(int windowX, int windowY) {
-        addBall.x = windowToWorldCoordsX(framebuffer, projection, windowX);
-        addBall.y = windowToWorldCoordsY(framebuffer, projection, windowY);
+    public void updateNewBall(double windowX, double windowY) {
+        addBall.x = (float) windowToWorldCoordsX(framebuffer, projection, windowX);
+        addBall.y = (float) windowToWorldCoordsY(framebuffer, projection, windowY);
         setLineFromTo(lineHandle, centreX, centreY, addBall.x, addBall.y);
     }
     
@@ -561,7 +590,7 @@ public class Pong {
      * @param windowX The window x coordinate of the mouse.
      * @param windowY The window y coordinate of the mouse.
      */
-    public void onNewBallRelease(int windowX, int windowY) {
+    public void onNewBallRelease(double windowX, double windowY) {
         addBall.vx = (centreX - addBall.x) * BALL_SPEED_SCALE;
         addBall.vy = (centreY - addBall.y) * BALL_SPEED_SCALE;
         balls.add(addBall);
@@ -789,8 +818,8 @@ public class Pong {
      * @param windowX The x value in window coords.
      * @return The x value in world coords.
      */
-    public static float windowToWorldCoordsX(Framebuffer framebuffer, Projection proj, int windowX) {
-        return (((float) windowX / framebuffer.width) * (proj.right - proj.left)) + proj.left;
+    public static double windowToWorldCoordsX(Framebuffer framebuffer, Projection proj, double windowX) {
+        return ((windowX / framebuffer.width) * (proj.right - proj.left)) + proj.left;
     }
     
     /**
@@ -801,10 +830,14 @@ public class Pong {
      * @param windowY The y value in window coords.
      * @return The y value in world coords.
      */
-    public static float windowToWorldCoordsY(Framebuffer framebuffer, Projection proj, int windowY) {
-        return (((float) windowY / framebuffer.height) * (proj.top - proj.bottom)) + proj.bottom;
+    public static double windowToWorldCoordsY(Framebuffer framebuffer, Projection proj, double windowY) {
+        return ((windowY / framebuffer.height) * (proj.top - proj.bottom)) + proj.bottom;
     }
     
+    public static class CursorPos {
+        double x, y;
+    }
+  
     /**
      * A struct representing a framebuffer.
      */
