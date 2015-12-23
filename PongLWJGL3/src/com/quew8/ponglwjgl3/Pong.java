@@ -7,18 +7,13 @@ import java.io.InputStream;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import org.lwjgl.BufferUtils;
-import org.lwjgl.LWJGLException;
-import org.lwjgl.Sys;
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
-import org.lwjgl.opengl.ContextAttribs;
-import org.lwjgl.opengl.Display;
-import org.lwjgl.opengl.DisplayMode;
+import static org.lwjgl.glfw.GLFW.*;
+import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.opengl.GL;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
-import org.lwjgl.opengl.PixelFormat;
 
 /**
  *
@@ -82,10 +77,13 @@ public class Pong {
      */
     private static final boolean START_FULLSCREEN = true;
     /**
-     * Has the display gone into fullscreen mode during the last loop. Needed in 
-     * LWJGL2 to cause a framebuffer resize update.
+     * A reference to the error callback so it doesn't get GCd.
      */
-    private boolean goneFullscreen = false;
+    private GLFWErrorCallback errorCallback;
+    /**
+     * The handle of the window.
+     */
+    private long window;
     /**
      * Has there been a close request not coming from the window itself.
      */
@@ -160,19 +158,32 @@ public class Pong {
      */
     private FloatBuffer replaceBuffer;
     
-    public void init() throws LWJGLException {
-        //Set title
-        Display.setTitle("Pong - LWJGL2");
+    public void init() {
+        //Initialize GLFW.
+        glfwInit();
+        //Setup an error callback to print GLFW errors to the console.
+        glfwSetErrorCallback(errorCallback = GLFWErrorCallback.createPrint(System.err));
+        
         //Set resizable
-        Display.setResizable(true);
-        //Set initial fullscreen state.
-        Display.setFullscreen(START_FULLSCREEN);
-        setDisplayMode(false);
-        //Create the window, requesting an OpenGL 3.3 Core context.
-        //Must specify pixel format in LWJGL2 in order to specify context.
-        Display.create(new PixelFormat(), new ContextAttribs(3, 3).withProfileCore(true));
+        glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
+        //Request an OpenGL 3.3 Core context.
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        //Create the window with the specified title.
+        window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Pong - LWJGL3", 0, 0);
+        if(window == 0) {
+            throw new RuntimeException("Failed to create window");
+        }
+        //Make this window's context the current on this thread.
+        glfwMakeContextCurrent(window);
+        //Let LWJGL know to use this current context.
+        GL.createCapabilities();
         
         initGL();
+        
+        //Make this window visible.
+        glfwShowWindow(window);
         
         //For the first frame, take this time to be the last frame's start.
         lastTime = currentTimeMillis();
@@ -278,11 +289,10 @@ public class Pong {
     /**
      * Loops game, rendering and updating until close requested.
      * 
-     * @throws LWJGLException thrown by update(i).
      */
-    public void loop() throws LWJGLException {
+    public void loop() {
         //Continue whilst no close request from internal nor external.
-        while(!Display.isCloseRequested() && remainOpen) {
+        while(glfwWindowShouldClose(window) == GL_FALSE && remainOpen) {
             //Calculate delta time
             long thisTime = currentTimeMillis();
             int delta = (int) (thisTime - lastTime);
@@ -291,8 +301,10 @@ public class Pong {
             update(delta);
             render();
             
-            //Swaps framebuffers and polls input.
-            Display.update();
+            //Polls input.
+            glfwPollEvents();
+            //Swaps framebuffers.
+            glfwSwapBuffers(window);
         }
     }
     
@@ -303,8 +315,8 @@ public class Pong {
      * @param delta The Time difference in milliseconds since the last frame.
      * @throws LWJGLException if could not go fullscreen.
      */
-    public void update(int delta) throws LWJGLException {
-        //Iterate through mouse input events.
+    public void update(int delta) {
+        /*//Iterate through mouse input events.
         while(Mouse.next()) {
             //If this event is primary mouse button.
             if(Mouse.getEventButton() == 0) {
@@ -357,7 +369,7 @@ public class Pong {
                     break;
                 }
             }
-        }
+        }*/
     }
     
     /**
@@ -393,7 +405,8 @@ public class Pong {
      */
     public void deinit() {
         deinitGL();
-        Display.destroy();
+        glfwDestroyWindow(window);   
+        glfwTerminate();
     }
     
     /**
@@ -462,15 +475,14 @@ public class Pong {
      * fullscreen mode or not. Uses desktop display mode for fullscreen mode.
      * 
      * @param toggle Toggle the fullscreen setting before setting the display mode.
-     * @throws LWJGLException 
      */
-    public void setDisplayMode(boolean toggle) throws LWJGLException {
-        if(Display.isFullscreen() ^ toggle) {
+    public void setDisplayMode(boolean toggle) {
+        /*if(Display.isFullscreen() ^ toggle) {
             goneFullscreen = true;
             Display.setDisplayModeAndFullscreen(Display.getDesktopDisplayMode());
         } else {
             Display.setDisplayMode(new DisplayMode(WINDOW_WIDTH, WINDOW_HEIGHT));
-        }
+        }*/
     }
     
     /**
@@ -498,8 +510,8 @@ public class Pong {
      * @param windowY The window y coordinate of the mouse.
      */
     public void onNewBall(int windowX, int windowY) {
-        centreX = windowToWorldCoordsX(framebuffer, projection, Mouse.getEventX());
-        centreY = windowToWorldCoordsY(framebuffer, projection, Mouse.getEventY());
+        centreX = windowToWorldCoordsX(framebuffer, projection, windowX);
+        centreY = windowToWorldCoordsY(framebuffer, projection, windowY);
         addBall = new Ball(centreX, centreY, 0, 0);
     }
     
@@ -510,8 +522,8 @@ public class Pong {
      * @param windowY The window y coordinate of the mouse.
      */
     public void updateNewBall(int windowX, int windowY) {
-        addBall.x = windowToWorldCoordsX(framebuffer, projection, Mouse.getX());
-        addBall.y = windowToWorldCoordsY(framebuffer, projection, Mouse.getY());
+        addBall.x = windowToWorldCoordsX(framebuffer, projection, windowX);
+        addBall.y = windowToWorldCoordsY(framebuffer, projection, windowY);
         setLineFromTo(lineHandle, centreX, centreY, addBall.x, addBall.y);
     }
     
@@ -673,7 +685,7 @@ public class Pong {
      * @return The current system time in milliseconds.
      */
     public static long currentTimeMillis() {
-        return Sys.getTime() * 1000 / Sys.getTimerResolution();
+        return 0;//Sys.getTime() * 1000 / Sys.getTimerResolution();
     }
     
     /**
@@ -885,10 +897,9 @@ public class Pong {
     
     /**
      * @param args the command line arguments
-     * @throws org.lwjgl.LWJGLException
      * @throws java.io.IOException
      */
-    public static void main(String[] args) throws LWJGLException, IOException {
+    public static void main(String[] args) throws IOException {
         String[] natives = new String[] {
             "glfw.dll",
             "glfw32.dll",
