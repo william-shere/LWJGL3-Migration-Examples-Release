@@ -10,6 +10,7 @@ import org.lwjgl.BufferUtils;
 import static org.lwjgl.glfw.GLFW.*;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWFramebufferSizeCallback;
+import org.lwjgl.glfw.GLFWKeyCallback;
 import org.lwjgl.opengl.GL;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
@@ -85,6 +86,10 @@ public class Pong {
      * A reference to the framebuffer size callback.
      */
     private GLFWFramebufferSizeCallback framebufferSizeCallback;
+    /**
+     * A reference to the key callback.
+     */
+    private GLFWKeyCallback keyCallback;
     /**
      * The handle of the window.
      */
@@ -197,6 +202,26 @@ public class Pong {
             
         }));
         onResize(WINDOW_WIDTH, WINDOW_HEIGHT);
+        
+        //Setup the framebuffer resize callback.
+        glfwSetKeyCallback(window, (keyCallback = new GLFWKeyCallback() {
+
+            @Override
+            public void invoke(long window, int key, int scancode, int action, int mods) {
+                //If current event key is Space and is up event.
+                //Else If current event key is F5 and is key up event.
+                //Else If current event key is Escape and is key up event.
+                if(key == GLFW_KEY_SPACE && action == GLFW_RELEASE) {
+                    onPlayPauseToggle();
+                } else if(key == GLFW_KEY_F5 && action == GLFW_RELEASE) {
+                    setDisplayMode(true);
+                } else if(key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
+                    //Request close.
+                    remainOpen = false;
+                }
+            }
+
+        }));
         
         //Make this window visible.
         glfwShowWindow(window);
@@ -348,28 +373,20 @@ public class Pong {
         if(addBall != null) {
             updateNewBall(Mouse.getX(), Mouse.getY());
         }
+        */
         
-        //Iterate through keyboard events.
-        while(Keyboard.next()) {
-            //If current event key is Space and is up event.
-            //Else If current event key is F5 and is key up event.
-            //Else If current event key is Escape and is key up event.
-            if(Keyboard.getEventKey() == Keyboard.KEY_SPACE && !Keyboard.getEventKeyState()) {
-                onPlayPauseToggle();
-            } else if(Keyboard.getEventKey() == Keyboard.KEY_F5 && !Keyboard.getEventKeyState()) {
-                setDisplayMode(true);
-            } else if(Keyboard.getEventKey() == Keyboard.KEY_ESCAPE && !Keyboard.getEventKeyState()) {
-                //Request close.
-                remainOpen = false;
-            }
-        }
-        //If display is resized or has gone fullscreen (leaving fullscreen 
-        //causes resize event anyway) then framebuffer has resized and needs 
-        //update.
         //If not paused then update paddles.
         if(currentState == State.PLAYING || currentState == State.LOST) {
-            updatePaddle(paddle1, delta, Keyboard.isKeyDown(Keyboard.KEY_W), Keyboard.isKeyDown(Keyboard.KEY_S));
-            updatePaddle(paddle2, delta, Keyboard.isKeyDown(Keyboard.KEY_UP), Keyboard.isKeyDown(Keyboard.KEY_DOWN));
+            updatePaddle(
+                paddle1, delta, 
+                glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS, 
+                glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS
+            );
+            updatePaddle(
+                paddle2, delta, 
+                glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS,
+                glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS
+            );
 
         }
         //If playing then update balls.
@@ -379,7 +396,7 @@ public class Pong {
                     break;
                 }
             }
-        }*/
+        }
     }
     
     /**
