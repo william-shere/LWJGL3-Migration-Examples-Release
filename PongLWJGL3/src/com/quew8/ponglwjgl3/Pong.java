@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import org.lwjgl.BufferUtils;
 import static org.lwjgl.glfw.GLFW.*;
 import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.glfw.GLFWFramebufferSizeCallback;
 import org.lwjgl.opengl.GL;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
@@ -80,6 +81,10 @@ public class Pong {
      * A reference to the error callback so it doesn't get GCd.
      */
     private GLFWErrorCallback errorCallback;
+    /**
+     * A reference to the framebuffer size callback.
+     */
+    private GLFWFramebufferSizeCallback framebufferSizeCallback;
     /**
      * The handle of the window.
      */
@@ -181,6 +186,17 @@ public class Pong {
         GL.createCapabilities();
         
         initGL();
+        
+        //Setup the framebuffer resize callback.
+        glfwSetFramebufferSizeCallback(window, (framebufferSizeCallback = new GLFWFramebufferSizeCallback() {
+
+            @Override
+            public void invoke(long window, int width, int height) {
+                onResize(width, height);
+            }
+            
+        }));
+        onResize(WINDOW_WIDTH, WINDOW_HEIGHT);
         
         //Make this window visible.
         glfwShowWindow(window);
@@ -351,11 +367,6 @@ public class Pong {
         //If display is resized or has gone fullscreen (leaving fullscreen 
         //causes resize event anyway) then framebuffer has resized and needs 
         //update.
-        if(Display.wasResized() || goneFullscreen) {
-            //Reset goneFullscreen flag.
-            goneFullscreen = false;
-            onResize(Display.getWidth(), Display.getHeight());
-        }
         //If not paused then update paddles.
         if(currentState == State.PLAYING || currentState == State.LOST) {
             updatePaddle(paddle1, delta, Keyboard.isKeyDown(Keyboard.KEY_W), Keyboard.isKeyDown(Keyboard.KEY_S));
