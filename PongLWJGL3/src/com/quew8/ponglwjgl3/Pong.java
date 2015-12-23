@@ -118,7 +118,7 @@ public class Pong {
     /**
      * The time of the start of the last loop. Used for delta time calculation.
      */
-    private long lastTime;
+    private double lastTime;
     /**
      * Shaders.
      */
@@ -310,8 +310,8 @@ public class Pong {
         //Continue whilst no close request from internal nor external.
         while(glfwWindowShouldClose(window) == GL_FALSE && remainOpen) {
             //Calculate delta time
-            long thisTime = currentTimeMillis();
-            int delta = (int) (thisTime - lastTime);
+            double thisTime = currentTimeMillis();
+            double delta = thisTime - lastTime;
             lastTime = thisTime;
             
             update(delta);
@@ -329,9 +329,8 @@ public class Pong {
      * and handling framebuffer resize events.
      * 
      * @param delta The Time difference in milliseconds since the last frame.
-     * @throws LWJGLException if could not go fullscreen.
      */
-    public void update(int delta) {
+    public void update(double delta) {
         /*//Iterate through mouse input events.
         while(Mouse.next()) {
             //If this event is primary mouse button.
@@ -504,7 +503,7 @@ public class Pong {
      * @param up Is this paddle's "up" control down.
      * @param down Is this paddle's "down" control down.
      */
-    public void updatePaddle(Paddle p, int delta, boolean up, boolean down) {
+    public void updatePaddle(Paddle p, double delta, boolean up, boolean down) {
         if(up) {
             p.y += delta * PADDLE_SPEED;
         }
@@ -560,7 +559,7 @@ public class Pong {
      * @param delta The delta time.
      * @return false if the ball is out of play.
      */
-    public boolean updateBall(Ball b, int delta) {
+    public boolean updateBall(Ball b, double delta) {
         b.x += b.vx * delta;
         b.y += b.vy * delta;
         if(b.x + BALL_RADIUS < 0) {
@@ -695,8 +694,8 @@ public class Pong {
      * 
      * @return The current system time in milliseconds.
      */
-    public static long currentTimeMillis() {
-        return 0;//Sys.getTime() * 1000 / Sys.getTimerResolution();
+    public static double currentTimeMillis() {
+        return glfwGetTime() * 1000;
     }
     
     /**
