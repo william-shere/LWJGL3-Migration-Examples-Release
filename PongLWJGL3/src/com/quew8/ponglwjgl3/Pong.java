@@ -369,7 +369,7 @@ public class Pong {
         glUseProgram(program);
         glBindVertexArray(vao);
         
-        glUniformMatrix4(projectionLoc, false, projectionMatrix);
+        glUniformMatrix4fv(projectionLoc, false, projectionMatrix);
         
         drawHandleLinesAt(boundsHandle, 0, 0);
         drawHandleAt(paddleHandle, paddle1.getX(), paddle1.y);
@@ -415,7 +415,7 @@ public class Pong {
      */
     public void drawHandleLinesAt(RenderHandle handle, float x, float y) {
         setTranslation(modelViewMatrix, x, y);
-        glUniformMatrix4(modelViewLoc, false, modelViewMatrix);
+        glUniformMatrix4fv(modelViewLoc, false, modelViewMatrix);
         glDrawArrays(GL_LINE_LOOP, handle.first, handle.count);
     }
     
@@ -429,7 +429,7 @@ public class Pong {
      */
     public void drawHandleAt(RenderHandle handle, float x, float y) {
         setTranslation(modelViewMatrix, x, y);
-        glUniformMatrix4(modelViewLoc, false, modelViewMatrix);
+        glUniformMatrix4fv(modelViewLoc, false, modelViewMatrix);
         glDrawArrays(GL_TRIANGLE_FAN, handle.first, handle.count);
     }
     
