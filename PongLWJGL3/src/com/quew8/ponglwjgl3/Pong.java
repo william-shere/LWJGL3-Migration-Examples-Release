@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
 import org.lwjgl.BufferUtils;
 import static org.lwjgl.glfw.GLFW.*;
@@ -13,6 +14,7 @@ import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWFramebufferSizeCallback;
 import org.lwjgl.glfw.GLFWKeyCallback;
 import org.lwjgl.glfw.GLFWMouseButtonCallback;
+import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
@@ -193,9 +195,21 @@ public class Pong {
         //Request an OpenGL 3.3 Core context.
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); 
+        int windowWidth = WINDOW_WIDTH;
+        int windowHeight = WINDOW_HEIGHT;
+        long monitor = 0;
+        if(START_FULLSCREEN) {
+            //Get the primary monitor.
+            monitor = glfwGetPrimaryMonitor();
+            //Retrieve the desktop resolution
+            GLFWVidMode vidMode = glfwGetVideoMode(monitor);
+            windowWidth = vidMode.width();
+            windowHeight = vidMode.height();
+        }
         //Create the window with the specified title.
-        window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Pong - LWJGL3", 0, 0);
+        window = glfwCreateWindow(windowWidth, windowHeight, "Pong - LWJGL3", monitor, 0);       
+
         if(window == 0) {
             throw new RuntimeException("Failed to create window");
         }
@@ -215,7 +229,14 @@ public class Pong {
             }
             
         }));
-        onResize(WINDOW_WIDTH, WINDOW_HEIGHT);
+        
+        //Create buffers to put the framebuffer width and height into.
+        IntBuffer framebufferWidth = BufferUtils.createIntBuffer(1), 
+                framebufferHeight = BufferUtils.createIntBuffer(1);
+        //Put the framebuffer dimensions into these buffers.
+        glfwGetFramebufferSize(window, framebufferWidth, framebufferHeight);
+        //Intialize the projection matrix with the framebuffer dimensions.
+        onResize(framebufferWidth.get(), framebufferHeight.get());
         
         //Setup the framebuffer resize callback.
         glfwSetKeyCallback(window, (keyCallback = new GLFWKeyCallback() {
@@ -228,7 +249,7 @@ public class Pong {
                 if(key == GLFW_KEY_SPACE && action == GLFW_RELEASE) {
                     onPlayPauseToggle();
                 } else if(key == GLFW_KEY_F5 && action == GLFW_RELEASE) {
-                    setDisplayMode(true);
+                    
                 } else if(key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
                     //Request close.
                     remainOpen = false;
@@ -524,21 +545,6 @@ public class Pong {
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferSubData(GL_ARRAY_BUFFER, handle.first * 5 * 4, replaceBuffer);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-    }
-    
-    /**
-     * Sets the appropriate display mode based on whether the display is in 
-     * fullscreen mode or not. Uses desktop display mode for fullscreen mode.
-     * 
-     * @param toggle Toggle the fullscreen setting before setting the display mode.
-     */
-    public void setDisplayMode(boolean toggle) {
-        /*if(Display.isFullscreen() ^ toggle) {
-            goneFullscreen = true;
-            Display.setDisplayModeAndFullscreen(Display.getDesktopDisplayMode());
-        } else {
-            Display.setDisplayMode(new DisplayMode(WINDOW_WIDTH, WINDOW_HEIGHT));
-        }*/
     }
     
     /**
