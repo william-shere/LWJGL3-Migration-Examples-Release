@@ -1,4 +1,4 @@
-package com.quew8.ponglwjgl2;
+package com.quew8.ponglwjgl3;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -890,11 +890,21 @@ public class Pong {
      */
     public static void main(String[] args) throws LWJGLException, IOException {
         String[] natives = new String[] {
+            "glfw.dll",
+            "glfw32.dll",
+            "jemalloc.dll",
+            "jemalloc32.dll",
+            "libglfw.dylib",
+            "libglfw.so",
+            "libglfw32.so",
+            "libjemalloc.dylib",
+            "libjemalloc.so",
+            "libjemalloc32.so",
             "liblwjgl.dylib",
             "liblwjgl.so",
-            "liblwjgl64.so",
+            "liblwjgl32.so",
             "lwjgl.dll",
-            "lwjgl64.dll"
+            "lwjgl32.dll"
         };
         File tmpDir = new File(System.getProperty("java.io.tmpdir"));
         byte[] buff = new byte[2048];
